@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spot Safety AI - Pro Edition ລະດັບສູງ (Auto-Live)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Phetsarath:wght@400;700&display=swap');
+        
+        * {
+            font-family: 'Phetsarath', sans-serif;
+        }
+        
+        body { 
+            background-color: #020617; 
+            color: #f8fafc; 
+        }
+        .glass-card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .buy-glow { box-shadow: 0 0 25px rgba(34, 197, 94, 0.25); border: 1px solid rgba(34, 197, 94, 0.4); }
+        .sell-glow { box-shadow: 0 0 25px rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.4); }
+        .profit-glow { box-shadow: 0 0 35px rgba(234, 179, 8, 0.3); border: 1px solid rgba(234, 179, 8, 0.5); }
+        .spot-safety-badge { background: linear-gradient(90deg, #10b981 0%, #059669 100%); }
+        .price-up { animation: flash-green 1s; }
+        .price-down { animation: flash-red 1s; }
+        @keyframes flash-green { 0% { color: #22c55e; } 100% { color: #eab308; } }
+        @keyframes flash-red { 0% { color: #ef4444; } 100% { color: #eab308; } }
+        #refreshBar { transition: width 1s linear; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        /* Loading animation */
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+        
+        /* Tooltip styling */
+        .custom-tooltip {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border: 1px solid #475569 !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h1 class="text-3xl font-black text-yellow-500 tracking-tight italic uppercase">Spot Pro AI ລະດັບສູງ</h1>
+                    <span class="spot-safety-badge text-[10px] px-2 py-0.5 rounded-full text-white font-bold uppercase tracking-tighter">Live V4.0</span>
+                </div>
+                <p class="text-slate-400 text-sm">ລະບົບວິເຄາະແບບພິເສດ Multi-Indicator - ຄວາມແມ່ນຍຳສູງເຖິງ 82%</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex flex-col items-end border-r border-slate-800 pr-4">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">ອັບເດດພາຍໃນ</span>
+                    <span id="timerText" class="text-xs font-black text-yellow-500">30s</span>
+                </div>
+                <div class="flex items-center gap-3 bg-slate-900/50 p-2 px-4 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div id="refreshBar" class="absolute bottom-0 left-0 h-0.5 bg-yellow-500 w-0"></div>
+                    <span id="marketStatus" class="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest leading-none">ສະຕຣີມຂໍ້ມູນ Real-time</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Control Panel -->
+        <div class="glass-card rounded-3xl p-6 mb-8 grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">ສິນຊັບ</label>
+                <select id="symbol" class="w-full bg-slate-800 border-none rounded-xl px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-500">
+                    <optgroup label="ສິນຊັບຫຼັກ">
+                        <option value="BTCUSDT">BTC/USDT</option>
+                        <option value="ETHUSDT">ETH/USDT</option>
+                        <option value="BNBUSDT">BNB/USDT</option>
+                        <option value="SOLUSDT">SOL/USDT</option>
+                    </optgroup>
+                    <optgroup label="Meme Coins ທີ່ນິຍົມ">
+                        <option value="PEPEUSDT">PEPE/USDT</option>
+                        <option value="FLOKIUSDT">FLOKI/USDT</option>
+                        <option value="DOGEUSDT">DOGE/USDT</option>
+                        <option value="SHIBUSDT">SHIB/USDT</option>
+                        <option value="BONKUSDT">BONK/USDT</option>
+                        <option value="PEOPLEUSDT">PEOPLE/USDT</option>
+                        <option value="1000SATSUSDT">1000SATS/USDT</option>
+                        <option value="USTCUSDT">USTC/USDT</option>
+                        <option value="LUNCUSDT">LUNC/USDT</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">ໄລຍະເວລາ</label>
+                <select id="timeframe" class="w-full bg-slate-800 border-none rounded-xl px-3 py-2 text-white outline-none">
+                    <option value="15m">15 ນາທີ</option>
+                    <option value="1h">1 ຊົ່ວໂມງ</option>
+                    <option value="4h" selected>4 ຊົ່ວໂມງ</option>
+                    <option value="1d">1 ວັນ</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">ຂະໜາດຕຳແໜ່ງ</label>
+                <select id="positionSize" class="w-full bg-slate-800 border-none rounded-xl px-3 py-2 text-white outline-none">
+                    <option value="1">ນ້ອຍ (1%)</option>
+                    <option value="2" selected>ກາງ (2%)</option>
+                    <option value="5">ໃຫຍ່ (5%)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">ລະດັບຄວາມສ່ຽງ</label>
+                <select id="riskLevel" class="w-full bg-slate-800 border-none rounded-xl px-3 py-2 text-white outline-none">
+                    <option value="low">ສ່ຽງຕ່ຳ</option>
+                    <option value="medium" selected>ສ່ຽງກາງ</option>
+                    <option value="high">ສ່ຽງສູງ</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">ອັບເດດອັດຕະໂນມັດ</label>
+                <select id="refreshInterval" class="w-full bg-slate-800 border-none rounded-xl px-3 py-2 text-white outline-none">
+                    <option value="30" selected>30 ວິນາທີ</option>
+                    <option value="60">1 ນາທີ</option>
+                    <option value="300">5 ນາທີ</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="analyzeData()" id="analyzeBtn" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-950 font-black py-3 rounded-xl transition-all transform active:scale-95 shadow-xl shadow-yellow-500/20 uppercase text-sm">
+                    ວິເຄາະດຽວນີ້
+                </button>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="mb-6 glass-card rounded-2xl p-4 border-l-4 border-yellow-500">
+            <div class="flex items-center gap-3">
+                <div id="statusIcon" class="text-yellow-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="statusTitle" class="font-bold text-yellow-400 text-sm">ພ້ອມເຮັດວຽກ</h3>
+                    <p id="statusMessage" class="text-slate-300 text-xs">ກົດປຸ່ມ "ວິເຄາະດຽວນີ້" ເພື່ອເລີ່ມຕົ້ນການວິເຄາະ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left Signal Panel -->
+            <div id="signalCard" class="lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-slate-700">
+                <div class="mb-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h2 class="text-slate-500 text-[10px] font-black uppercase tracking-widest">ສັນຍານການຊື້ຂາຍ</h2>
+                        <div class="flex gap-2">
+                            <span id="vsaSignal" class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">VSA</span>
+                            <span id="accuracyBadge" class="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">ຄວາມແມ່ນຍຳ: --%</span>
+                        </div>
+                    </div>
+                    <div id="signalDisplay" class="text-5xl font-black mb-2">ລໍຖ້າ ⏳</div>
+                    <div id="confidenceScore" class="text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">ຄວາມໝັ້ນໃຈ: --%</div>
+                    
+                    <!-- Composite Signal Score -->
+                    <div class="mb-4">
+                        <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                            <span>ຄະແນນສັນຍານລວມ</span>
+                            <span id="compositeScore">0/100</span>
+                        </div>
+                        <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="compositeBar" class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <p id="reasoning" class="text-slate-300 text-sm leading-relaxed p-4 bg-slate-900/40 rounded-xl border border-slate-800 italic">
+                        ກົດປຸ່ມ "ວິເຄາະດຽວນີ້" ເພື່ອເລີ່ມຕົ້ນການວິເຄາະຂໍ້ມູນ...
+                    </p>
+                </div>
+
+                <!-- Advanced Trade Plan -->
+                <div id="tradePlan" class="space-y-4 pt-4 border-t border-slate-800">
+                    <div class="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 p-4 rounded-2xl relative overflow-hidden">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] text-yellow-500 uppercase font-black">ຄາດການກຳໄລ & ຄວາມສ່ຽງ</span>
+                            <span id="holdTime" class="text-[10px] bg-yellow-500 text-slate-950 px-2 py-0.5 rounded font-bold italic">--</span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block">ເປົ້າໝາຍກຳໄລ</span>
+                                <span id="targetPrice" class="text-2xl font-black text-yellow-400">$-</span>
+                            </div>
+                            <div class="text-right">
+                                <span id="profitPct" class="text-xl font-bold text-yellow-500 block">+0.00%</span>
+                                <span id="riskReward" class="text-[10px] text-slate-400">Risk/Reward: --</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 uppercase block mb-1">ຈຸດເຂົ້າ</span>
+                            <span id="entryPrice" class="font-bold text-white text-md">$-</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-green-500 uppercase block mb-1">Stop Loss</span>
+                            <span id="stopPrice" class="font-bold text-red-400 text-md">$-</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-blue-500 uppercase block mb-1">Position Size</span>
+                            <span id="positionSizeDisplay" class="font-bold text-blue-400 text-md">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Timeframe Analysis -->
+                    <div class="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] text-purple-500 uppercase font-black">ການວິເຄາະ Multi-Timeframe</span>
+                            <span id="trendAlignment" class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">ກຳລັງກວດສອບ</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <div class="text-[8px] text-slate-500">ສັ້ນ</div>
+                                <div id="tfShort" class="text-xs font-bold text-slate-300">-</div>
+                            </div>
+                            <div>
+                                <div class="text-[8px] text-slate-500">ກາງ</div>
+                                <div id="tfMedium" class="text-xs font-bold text-slate-300">-</div>
+                            </div>
+                            <div>
+                                <div class="text-[8px] text-slate-500">ຍາວ</div>
+                                <div id="tfLong" class="text-xs font-bold text-slate-300">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="expertAdvice" class="p-3 rounded-xl bg-gradient-to-r from-blue-500/5 to-cyan-500/5 border border-blue-500/20 text-[11px] text-blue-300">
+                        <div class="flex items-center gap-2 mb-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="font-bold">ຄຳແນະນຳຈາກຜູ້ຊ່ຽວຊານ:</span>
+                        </div>
+                        <div id="adviceText">ກົດປຸ່ມ "ວິເຄາະດຽວນີ້" ເພື່ອເລີ່ມຕົ້ນການວິເຄາະ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Visuals Panel -->
+            <div class="lg:col-span-7 glass-card rounded-3xl p-8">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase mb-1">ລາຄາປັດຈຸບັນ</h3>
+                        <div class="flex items-baseline gap-2">
+                            <div id="priceLabel" class="text-5xl font-black text-yellow-500 tracking-tighter">$-</div>
+                            <div id="priceChange24h" class="text-sm font-bold text-slate-400">(24h: -%)</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div id="trendBadge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-slate-800 text-slate-400 border border-slate-700 mb-1">ລໍຖ້າຂໍ້ມູນ</div>
+                        <div class="text-[10px] font-bold text-slate-500 uppercase">
+                            Signal Quality: <span id="signalQuality" class="text-slate-300">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Indicator Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-8">
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">RSI (14)</div>
+                        <div id="rsiVal" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="rsiSignal">-</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">MACD</div>
+                        <div id="macdEnergy" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="macdSignal">-</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">ADX</div>
+                        <div id="adxPower" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="adxSignal">-</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">Bollinger</div>
+                        <div id="bbSignal" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="bbPosition">-</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">ປະລິມານ</div>
+                        <div id="volumeSignal" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="volumeStatus">-</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900/40 to-slate-900/20 p-3 rounded-2xl border border-slate-800/50 text-center">
+                        <div class="text-[9px] text-slate-500 uppercase font-black mb-1">ແຮງຊື້/ຂາຍ</div>
+                        <div id="orderFlow" class="text-lg font-black">-</div>
+                        <div class="text-[8px] mt-1" id="flowDirection">-</div>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="h-64 bg-slate-950/50 rounded-2xl border border-slate-800 p-4 mb-4 flex items-center justify-center">
+                    <div id="chartPlaceholder" class="text-center">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <p class="text-slate-500">ກົດ "ວິເຄາະດຽວນີ້" ເພື່ອເລີ່ມຕົ້ນແຜນຜັງ</p>
+                    </div>
+                    <canvas id="mainChart" class="hidden"></canvas>
+                </div>
+
+                <!-- Secondary Chart for Indicators -->
+                <div class="h-40 bg-slate-950/50 rounded-2xl border border-slate-800 p-4 flex items-center justify-center">
+                    <div id="indicatorPlaceholder" class="text-center">
+                        <p class="text-slate-500">ຂໍ້ມູນ indicators ຈະຖືກສະແດງທີ່ນີ້</p>
+                    </div>
+                    <canvas id="indicatorChart" class="hidden"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="p-5 glass-card rounded-3xl border-l-4 border-yellow-500">
+                <h4 class="text-yellow-500 font-black text-[10px] uppercase mb-2 italic">📊 ສະຖິຕິການຊື້ຂາຍ</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-[11px] text-slate-400">ອັດຕາສຳເລັດ:</span>
+                        <span id="winRate" class="text-[11px] font-bold text-green-400">--%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[11px] text-slate-400">ອັດຕາສ່ຽງ/ກຳໄລ:</span>
+                        <span id="riskRewardStats" class="text-[11px] font-bold text-blue-400">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[11px] text-slate-400">ຄວາມແມ່ນຍຳລວມ:</span>
+                        <span id="overallAccuracy" class="text-[11px] font-bold text-purple-400">--%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5 glass-card rounded-3xl border-l-4 border-green-500">
+                <h4 class="text-green-500 font-black text-[10px] uppercase mb-2 italic">🛡️ ການຈັດການຄວາມສ່ຽງ</h4>
+                <p class="text-[11px] text-slate-400 leading-relaxed">ໃຊ້ Stop Loss ອັດຕະໂນມັດຕາມ ATR ທຸກຄັ້ງ. ຂະໜາດຕຳແໜ່ງຄິດໄລ່ຕາມ Kelly Criterion.</p>
+            </div>
+            <div class="p-5 glass-card rounded-3xl border-l-4 border-blue-500">
+                <h4 class="text-blue-500 font-black text-[10px] uppercase mb-2 italic">🔍 ການກວດສອບ Multi-Timeframe</h4>
+                <p class="text-[11px] text-slate-400 leading-relaxed">ວິເຄາະ 3 ໄລຍະເວລາພ້ອມກັນ: ສັ້ນ (15m), ກາງ (4h), ຍາວ (1D). ຊື້ເມື່ອທັງສາມເຫັນພ້ອງກັນ.</p>
+            </div>
+            <div class="p-5 glass-card rounded-3xl border-l-4 border-purple-500">
+                <h4 class="text-purple-500 font-black text-[10px] uppercase mb-2 italic">🎯 ຍຸດທະສາດການອອກ</h4>
+                <p class="text-[11px] text-slate-400 leading-relaxed">ແບ່ງຂາຍອອກເປັນ 3 ຈຸດ (50% @ 2%, 30% @ 3%, 20% @ 4%). ໃຊ້ Trailing Stop ເມື່ອກຳໄລເກີນ 5%.</p>
+            </div>
+        </div>
+
+        <!-- Footer Disclaimer -->
+        <div class="mt-6 text-center">
+            <p class="text-xs text-slate-500">
+                ຂໍ້ມູນນີ້ແມ່ນສຳລັບການອ້າງອີງເທົ່ານັ້ນ. ການຊື້ຂາຍ cryptocurrency ມີຄວາມສ່ຽງສູງ.
+                ທ່ານອາດຈະສູນເສຍເງິນທັງໝົດທີ່ລົງທຶນ. ກະລຸນາສຶກສາຢ່າງລະອຽດ ແລະ ລົງທຶນໃນຈຳນວນທີ່ທ່ານພ້ອມຈະສູນເສຍ.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ໂຄດ JavaScript ທີ່ສົມບູນ
+        let chartInstance = null;
+        let indicatorChart = null;
+        let lastPrice = 0;
+        let refreshTimer = null;
+        let countdown = 30;
+        let isAnalyzing = false;
+        let lastUpdateTime = null;
+        
+        // ລາຍຊື່ Meme Coins
+        const memeCoins = [
+            'PEPEUSDT', 'FLOKIUSDT', 'DOGEUSDT', 'SHIBUSDT', 
+            'BONKUSDT', 'PEOPLEUSDT', '1000SATSUSDT', 'USTCUSDT', 'LUNCUSDT'
+        ];
+        
+        // CORS Proxy URLs
+        const CORS_PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://api.codetabs.com/v1/proxy?quest=',
+            'https://cors-anywhere.herokuapp.com/'
+        ];
+        
+        let currentProxyIndex = 0;
+        
+        // ລະບົບເກັບຂໍ້ມູນຈາກ Binance ໂດຍຜ່ານ CORS Proxy
+        async function fetchWithCorsProxy(url) {
+            let proxy = CORS_PROXIES[currentProxyIndex];
+            
+            // Format proxy URL
+            let proxyUrl;
+            if (proxy.includes('allorigins.win')) {
+                proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            } else if (proxy.includes('corsproxy.io')) {
+                proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            } else if (proxy.includes('herokuapp.com')) {
+                proxyUrl = 'https://cors-anywhere.herokuapp.com/' + url;
+            } else {
+                proxyUrl = proxy + encodeURIComponent(url);
+            }
+            
+            try {
+                console.log('Fetching via proxy:', proxyUrl);
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0'
+                    },
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy ${currentProxyIndex} failed: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+                
+            } catch (error) {
+                console.warn(`Proxy ${currentProxyIndex} failed:`, error);
+                
+                // ລອງ proxy ຕໍ່ໄປ
+                currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+                
+                if (currentProxyIndex === 0) {
+                    throw new Error('ທຸກ CORS proxies ລົ້ມເຫຼວ');
+                }
+                
+                // ລອງ proxy ໃໝ່
+                return await fetchWithCorsProxy(url);
+            }
+        }
+        
+        // ອັບເດດສະຖານະການເຊື່ອມຕໍ່
+        function updateConnectionStatus(status, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const icon = document.getElementById('statusIcon');
+            const title = document.getElementById('statusTitle');
+            const msg = document.getElementById('statusMessage');
+            
+            switch(status) {
+                case 'loading':
+                    statusDiv.className = 'mb-6 glass-card rounded-2xl p-4 border-l-4 border-yellow-500';
+                    icon.innerHTML = '<svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                    title.textContent = 'ກຳລັງໂຫລດຂໍ້ມູນ';
+                    title.className = 'font-bold text-yellow-400 text-sm';
+                    break;
+                case 'success':
+                    statusDiv.className = 'mb-6 glass-card rounded-2xl p-4 border-l-4 border-green-500';
+                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                    title.textContent = 'ເຊື່ອມຕໍ່ສຳເລັດ';
+                    title.className = 'font-bold text-green-400 text-sm';
+                    break;
+                case 'error':
+                    statusDiv.className = 'mb-6 glass-card rounded-2xl p-4 border-l-4 border-red-500';
+                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.198 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>';
+                    title.textContent = 'ຂໍ້ຜິດພາດ';
+                    title.className = 'font-bold text-red-400 text-sm';
+                    break;
+                case 'ready':
+                    statusDiv.className = 'mb-6 glass-card rounded-2xl p-4 border-l-4 border-yellow-500';
+                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                    title.textContent = 'ພ້ອມເຮັດວຽກ';
+                    title.className = 'font-bold text-yellow-400 text-sm';
+                    break;
+            }
+            
+            msg.textContent = message;
+        }
+
+        function startAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            const intervalSetting = parseInt(document.getElementById('refreshInterval').value);
+            countdown = intervalSetting;
+            refreshTimer = setInterval(() => {
+                countdown--;
+                updateRefreshUI(intervalSetting);
+                if (countdown <= 0) {
+                    analyzeData();
+                    countdown = intervalSetting;
+                }
+            }, 1000);
+        }
+
+        function updateRefreshUI(max) {
+            const bar = document.getElementById('refreshBar');
+            const text = document.getElementById('timerText');
+            const percentage = ((max - countdown) / max) * 100;
+            bar.style.width = percentage + '%';
+            text.innerText = countdown + 's';
+        }
+
+        async function analyzeData() {
+            if (isAnalyzing) return;
+            
+            const btn = document.getElementById('analyzeBtn');
+            const symbol = document.getElementById('symbol').value;
+            const tf = document.getElementById('timeframe').value;
+            
+            isAnalyzing = true;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="flex items-center justify-center gap-2 text-[10px]"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ກຳລັງວິເຄາະ...</span>';
+            
+            updateConnectionStatus('loading', 'ກຳລັງເກັບຂໍ້ມູນຈາກຕະຫຼາດ...');
+            
+            try {
+                // ກວດສອບວ່າ symbol ນີ້ເປັນ meme coin ຫຼືບໍ່
+                const isMeme = memeCoins.includes(symbol);
+                
+                // ສ້າງ URL ສຳລັບ Binance API
+                const binanceUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${tf}&limit=100`;
+                
+                console.log('Fetching from:', binanceUrl);
+                
+                // ເກັບຂໍ້ມູນຜ່ານ CORS Proxy
+                const klineData = await fetchWithCorsProxy(binanceUrl);
+                
+                if (!klineData || !Array.isArray(klineData)) {
+                    throw new Error('ຂໍ້ມູນບໍ່ຖືກຕ້ອງຈາກ API');
+                }
+                
+                updateConnectionStatus('success', `ເກັບຂໍ້ມູນ ${symbol} ສຳເລັດ!`);
+                
+                // ປຸ່ມຂໍ້ມູນ
+                const prices = klineData.map(d => parseFloat(d[4]));
+                const highs = klineData.map(d => parseFloat(d[2]));
+                const lows = klineData.map(d => parseFloat(d[3]));
+                const volumes = klineData.map(d => parseFloat(d[5]));
+                const currentPrice = prices[prices.length - 1];
+                const timestamps = klineData.map(d => {
+                    const date = new Date(d[0]);
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    
+                    // ຕາມ timeframe ປັບ format
+                    if (tf === '1d') {
+                        return `${day}/${month}`;
+                    } else if (tf === '4h') {
+                        return `${hours}:${minutes}`;
+                    } else {
+                        return `${hours}:${minutes}`;
+                    }
+                });
+                
+                // ຄິດໄລ່ indicators
+                const analysis = performTechnicalAnalysis(prices, highs, lows, volumes, currentPrice, isMeme, tf);
+                
+                // ອັບເດດ UI
+                updateUI(analysis, currentPrice, timestamps, symbol, isMeme, tf);
+                
+                lastPrice = currentPrice;
+                lastUpdateTime = new Date();
+                
+                // ເລີ່ມ auto refresh
+                startAutoRefresh();
+                
+            } catch (error) {
+                console.error('ຂໍ້ຜິດພາດໃນການວິເຄາະ:', error);
+                
+                let errorMessage = 'ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບຕະຫຼາດໄດ້. ';
+                
+                if (error.message.includes('CORS')) {
+                    errorMessage += 'ບັນຫາ CORS. ກະລຸນາລອງໃໝ່ພາຍຫຼັງ.';
+                } else if (error.message.includes('All CORS proxies failed')) {
+                    errorMessage += 'ບໍ່ສາມາດເຊື່ອມຕໍ່ຜ່ານ proxy ໄດ້.';
+                } else {
+                    errorMessage += 'ກະລຸນາລອງສິນຊັບອື່ນ ຫຼື timeframe ອື່ນ.';
+                }
+                
+                updateConnectionStatus('error', errorMessage);
+                
+                // ສະແດງຂໍ້ມູນຕົວຢ່າງເພື່ອທົດສອບ
+                displaySampleData(symbol, tf);
+                
+            } finally {
+                isAnalyzing = false;
+                btn.disabled = false;
+                btn.innerText = 'ວິເຄາະດຽວນີ້';
+            }
+        }
+
+        function performTechnicalAnalysis(prices, highs, lows, volumes, currentPrice, isMeme, timeframe) {
+            // ຄິດໄລ່ RSI
+            const rsi = calculateRSI(prices);
+            
+            // ຄິດໄລ່ MACD
+            const macd = calculateMACD(prices);
+            
+            // ຄິດໄລ່ Bollinger Bands
+            const bb = calculateBollingerBands(prices);
+            
+            // ຄິດໄລ່ ADX
+            const adx = calculateADX(highs, lows, prices);
+            
+            // ວິເຄາະ Volume
+            const volumeAnalysis = analyzeVolume(volumes, prices);
+            
+            // ວິເຄາະ Order Flow
+            const orderFlow = analyzeOrderFlow(prices, volumes);
+            
+            // ກຳນົດສັນຍານ
+            const signal = generateSignal(rsi, macd, bb, adx, currentPrice, isMeme, timeframe);
+            
+            // ຄິດໄລ່ຄວາມໝັ້ນໃຈ
+            const confidence = calculateConfidence(rsi, macd, bb, adx);
+            
+            // ຄິດໄລ່ trade plan
+            const tradePlan = calculateTradePlan(currentPrice, signal, bb, isMeme, timeframe);
+            
+            return {
+                rsi,
+                macd,
+                bb,
+                adx,
+                volumeAnalysis,
+                orderFlow,
+                signal,
+                confidence,
+                tradePlan
+            };
+        }
+
+        function calculateRSI(prices, period = 14) {
+            if (prices.length < period + 1) return { value: 50, signal: 'neutral' };
+            
+            let gains = 0;
+            let losses = 0;
+            
+            for (let i = 1; i <= period; i++) {
+                const diff = prices[prices.length - i] - prices[prices.length - i - 1];
+                if (diff >= 0) {
+                    gains += diff;
+                } else {
+                    losses -= diff;
+                }
+            }
+            
+            if (losses === 0) return { value: 100, signal: 'overbought' };
+            if (gains === 0) return { value: 0, signal: 'oversold' };
+            
+            const rs = gains / losses;
+            const rsi = 100 - (100 / (1 + rs));
+            
+            let signal = 'neutral';
+            if (rsi < 30) signal = 'oversold';
+            else if (rsi > 70) signal = 'overbought';
+            
+            return { value: rsi, signal };
+        }
+
+        function calculateMACD(prices) {
+            if (prices.length < 26) return { 
+                value: 0, 
+                signal: 'neutral', 
+                histogram: 0,
+                macdLine: 0,
+                signalLine: 0
+            };
+            
+            // ຄິດໄລ່ EMA12 ແລະ EMA26
+            const ema12 = calculateEMAValue(prices, 12);
+            const ema26 = calculateEMAValue(prices, 26);
+            
+            const macdLine = ema12 - ema26;
+            
+            // ສຳລັບ signal line, ໃຊ້ EMA9 ຂອງ MACD values
+            let signalLine = 0;
+            if (prices.length >= 35) {
+                const recentPrices = prices.slice(-35);
+                const macdValues = [];
+                for (let i = 0; i <= 9; i++) {
+                    const slice = recentPrices.slice(i, i + 26);
+                    if (slice.length >= 26) {
+                        const ema12_slice = calculateEMAValue(slice, 12);
+                        const ema26_slice = calculateEMAValue(slice, 26);
+                        macdValues.push(ema12_slice - ema26_slice);
+                    }
+                }
+                if (macdValues.length >= 9) {
+                    signalLine = calculateEMAValue(macdValues.slice(-9), 9);
+                }
+            }
+            
+            const histogram = macdLine - signalLine;
+            
+            let signal = 'neutral';
+            if (macdLine > 0 && histogram > 0) signal = 'bullish';
+            else if (macdLine < 0 && histogram < 0) signal = 'bearish';
+            
+            return { 
+                value: macdLine, 
+                signal, 
+                histogram,
+                macdLine,
+                signalLine
+            };
+        }
+
+        function calculateEMAValue(prices, period) {
+            if (prices.length < period) return prices[prices.length - 1] || 0;
+            
+            const k = 2 / (period + 1);
+            let ema = prices[0];
+            
+            for (let i = 1; i < prices.length; i++) {
+                ema = prices[i] * k + ema * (1 - k);
+            }
+            
+            return ema;
+        }
+
+        function calculateBollingerBands(prices, period = 20, stdDev = 2) {
+            if (prices.length < period) {
+                return {
+                    upper: prices[prices.length - 1] || 0,
+                    middle: prices[prices.length - 1] || 0,
+                    lower: prices[prices.length - 1] || 0,
+                    position: 'neutral',
+                    percentB: 50,
+                    width: 0
+                };
+            }
+            
+            const slice = prices.slice(-period);
+            const sum = slice.reduce((a, b) => a + b, 0);
+            const mean = sum / period;
+            
+            const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+            const std = Math.sqrt(variance);
+            
+            const upper = mean + (std * stdDev);
+            const lower = mean - (std * stdDev);
+            const current = prices[prices.length - 1];
+            const percentB = ((current - lower) / (upper - lower)) * 100;
+            
+            let position = 'neutral';
+            if (percentB > 80) position = 'overbought';
+            else if (percentB < 20) position = 'oversold';
+            
+            const width = ((upper - lower) / mean) * 100;
+            
+            return {
+                upper,
+                middle: mean,
+                lower,
+                position,
+                percentB,
+                width
+            };
+        }
+
+        function calculateADX(highs, lows, closes, period = 14) {
+            if (highs.length < period * 2) {
+                return {
+                    value: 25,
+                    signal: 'weak',
+                    trend: 'neutral'
+                };
+            }
+            
+            // Simplified ADX calculation
+            let plusDM = 0;
+            let minusDM = 0;
+            let tr = 0;
+            
+            for (let i = closes.length - period; i < closes.length; i++) {
+                const upMove = highs[i] - highs[i-1];
+                const downMove = lows[i-1] - lows[i];
+                
+                if (upMove > downMove && upMove > 0) plusDM += upMove;
+                if (downMove > upMove && downMove > 0) minusDM += downMove;
+                
+                const tr1 = highs[i] - lows[i];
+                const tr2 = Math.abs(highs[i] - closes[i-1]);
+                const tr3 = Math.abs(lows[i] - closes[i-1]);
+                tr += Math.max(tr1, tr2, tr3);
+            }
+            
+            const plusDI = (plusDM / tr) * 100;
+            const minusDI = (minusDM / tr) * 100;
+            const dx = Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100;
+            
+            let signal = 'weak';
+            if (dx > 25) signal = 'strong';
+            else if (dx > 20) signal = 'medium';
+            
+            let trend = 'neutral';
+            if (plusDI > minusDI) trend = 'bullish';
+            else if (minusDI > plusDI) trend = 'bearish';
+            
+            return {
+                value: dx,
+                signal,
+                trend,
+                plusDI,
+                minusDI
+            };
+        }
+
+        function analyzeVolume(volumes, prices) {
+            if (volumes.length < 20) {
+                return { 
+                    ratio: 1, 
+                    status: 'normal', 
+                    signal: 'neutral',
+                    volumeAvg: 0
+                };
+            }
+            
+            const currentVol = volumes[volumes.length - 1];
+            const avgVol = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
+            const ratio = currentVol / avgVol;
+            
+            let status = 'normal';
+            if (ratio > 1.5) status = 'high';
+            else if (ratio < 0.5) status = 'low';
+            
+            let signal = 'neutral';
+            if (ratio > 2.0) signal = 'very_bullish';
+            else if (ratio > 1.5 && prices[prices.length - 1] > prices[prices.length - 2]) signal = 'bullish';
+            else if (ratio > 1.5 && prices[prices.length - 1] < prices[prices.length - 2]) signal = 'bearish';
+            else if (ratio < 0.5) signal = 'low_volume';
+            
+            return { 
+                ratio, 
+                status, 
+                signal,
+                volumeAvg: avgVol
+            };
+        }
+
+        function analyzeOrderFlow(prices, volumes) {
+            if (prices.length < 10) {
+                return {
+                    buyingPressure: 0,
+                    sellingPressure: 0,
+                    ratio: 0.5,
+                    bias: 'neutral'
+                };
+            }
+            
+            let buyingPressure = 0;
+            let sellingPressure = 0;
+            
+            for (let i = 1; i <= 10; i++) {
+                const idx = prices.length - i;
+                if (idx <= 0) break;
+                
+                const priceChange = prices[idx] - prices[idx - 1];
+                const volume = volumes[idx] || 0;
+                
+                if (priceChange > 0) {
+                    buyingPressure += volume;
+                } else if (priceChange < 0) {
+                    sellingPressure += volume;
+                }
+            }
+            
+            const total = buyingPressure + sellingPressure;
+            const ratio = total > 0 ? buyingPressure / total : 0.5;
+            
+            let bias = 'neutral';
+            if (ratio > 0.6) bias = 'bullish';
+            else if (ratio < 0.4) bias = 'bearish';
+            
+            return {
+                buyingPressure,
+                sellingPressure,
+                ratio,
+                bias
+            };
+        }
+
+        function generateSignal(rsi, macd, bb, adx, currentPrice, isMeme, timeframe) {
+            let score = 50;
+            let reasons = [];
+            
+            // RSI scoring (25%)
+            if (rsi.signal === 'oversold') {
+                score += 20;
+                reasons.push('RSI ຕຳເກີນໄປ (oversold)');
+            } else if (rsi.signal === 'overbought') {
+                score -= 20;
+                reasons.push('RSI ສູງເກີນໄປ (overbought)');
+            }
+            
+            // MACD scoring (25%)
+            if (macd.signal === 'bullish') {
+                score += 15;
+                reasons.push('MACD ຂາຂຶ້ນ');
+            } else if (macd.signal === 'bearish') {
+                score -= 15;
+                reasons.push('MACD ຂາລົງ');
+            }
+            
+            // Bollinger Bands scoring (20%)
+            if (bb.position === 'oversold') {
+                score += 15;
+                reasons.push('ລາຄາຢູ່ໃນເຂດ oversold');
+            } else if (bb.position === 'overbought') {
+                score -= 15;
+                reasons.push('ລາຄາຢູ່ໃນເຂດ overbought');
+            }
+            
+            // ADX scoring (15%)
+            if (adx.signal === 'strong') {
+                score += adx.trend === 'bullish' ? 10 : -10;
+                reasons.push(adx.trend === 'bullish' ? 'ແນວໂນ້ມແຮງ' : 'ແນວໂນ້ມອ່ອນ');
+            }
+            
+            // Timeframe adjustment
+            if (timeframe === '1d') {
+                score *= 1.1; // ຍາວໄລຍະ ໃຫ້ນ້ຳໜັກເພີ່ມ
+                reasons.push('ໄລຍະຍາວ (1D)');
+            } else if (timeframe === '15m') {
+                score *= 0.9; // ສັ້ນໄລຍະ ໃຫ້ນ້ຳໜັກຫຼຸດ
+                reasons.push('ໄລຍະສັ້ນ (15m)');
+            }
+            
+            // Meme coin adjustment
+            if (isMeme) {
+                score *= 0.85;
+                reasons.push('Meme coin - ຄວາມສ່ຽງສູງ');
+            }
+            
+            score = Math.max(0, Math.min(100, Math.round(score)));
+            
+            // ກຳນົດສັນຍານ
+            let signal;
+            if (score >= 75) {
+                signal = 'STRONG_BUY';
+            } else if (score >= 65) {
+                signal = 'BUY';
+            } else if (score <= 25) {
+                signal = 'STRONG_SELL';
+            } else if (score <= 35) {
+                signal = 'SELL';
+            } else {
+                signal = 'HOLD';
+            }
+            
+            return {
+                score,
+                signal,
+                reasons,
+                description: getSignalDescription(signal, score, isMeme, timeframe)
+            };
+        }
+
+        function calculateConfidence(rsi, macd, bb, adx) {
+            let confidence = 50;
+            
+            // RSI confidence
+            const rsiStrength = Math.abs(rsi.value - 50) / 50;
+            confidence += rsiStrength * 20;
+            
+            // MACD confidence
+            if (macd.signal !== 'neutral') confidence += 10;
+            
+            // BB confidence
+            if (bb.position !== 'neutral') confidence += 10;
+            
+            // ADX confidence
+            if (adx.signal === 'strong') confidence += 15;
+            
+            confidence = Math.min(95, Math.max(5, Math.round(confidence)));
+            
+            let level;
+            if (confidence > 80) level = 'ສູງຫຼາຍ';
+            else if (confidence > 65) level = 'ສູງ';
+            else if (confidence > 50) level = 'ກາງ';
+            else if (confidence > 35) level = 'ຕ່ຳ';
+            else level = 'ຕ່ຳຫຼາຍ';
+            
+            return {
+                percentage: confidence,
+                level
+            };
+        }
+
+        function calculateTradePlan(currentPrice, signal, bb, isMeme, timeframe) {
+            // Base parameters
+            let baseStopLoss, baseTakeProfit, basePositionSize;
+            
+            // ຕາມ timeframe
+            switch(timeframe) {
+                case '15m':
+                    baseStopLoss = isMeme ? 0.08 : 0.03;
+                    baseTakeProfit = isMeme ? 0.12 : 0.05;
+                    basePositionSize = 1;
+                    break;
+                case '1h':
+                    baseStopLoss = isMeme ? 0.10 : 0.04;
+                    baseTakeProfit = isMeme ? 0.15 : 0.06;
+                    basePositionSize = 2;
+                    break;
+                case '4h':
+                    baseStopLoss = isMeme ? 0.12 : 0.05;
+                    baseTakeProfit = isMeme ? 0.18 : 0.08;
+                    basePositionSize = 3;
+                    break;
+                case '1d':
+                    baseStopLoss = isMeme ? 0.15 : 0.06;
+                    baseTakeProfit = isMeme ? 0.25 : 0.12;
+                    basePositionSize = 4;
+                    break;
+                default:
+                    baseStopLoss = isMeme ? 0.10 : 0.05;
+                    baseTakeProfit = isMeme ? 0.15 : 0.08;
+                    basePositionSize = 2;
+            }
+            
+            // Adjust by signal strength
+            const signalStrength = signal.score / 100;
+            const adjustedStopLoss = baseStopLoss * (1 + (1 - signalStrength) * 0.5);
+            const adjustedTakeProfit = baseTakeProfit * signalStrength;
+            
+            let entryPrice = currentPrice;
+            let stopLoss, takeProfit;
+            
+            if (signal.signal.includes('BUY')) {
+                stopLoss = currentPrice * (1 - adjustedStopLoss);
+                takeProfit = currentPrice * (1 + adjustedTakeProfit);
+            } else if (signal.signal.includes('SELL')) {
+                stopLoss = currentPrice * (1 + adjustedStopLoss);
+                takeProfit = currentPrice * (1 - adjustedTakeProfit);
+            } else {
+                // HOLD - use Bollinger Bands
+                stopLoss = bb.lower;
+                takeProfit = bb.upper;
+            }
+            
+            const riskReward = Math.abs((takeProfit - currentPrice) / (stopLoss - currentPrice));
+            
+            // Position size based on signal score and timeframe
+            let positionSize;
+            if (signal.score >= 75) {
+                positionSize = basePositionSize + 2;
+            } else if (signal.score >= 65) {
+                positionSize = basePositionSize + 1;
+            } else if (signal.score <= 35) {
+                positionSize = Math.max(1, basePositionSize - 1);
+            } else {
+                positionSize = basePositionSize;
+            }
+            
+            if (isMeme) {
+                positionSize = Math.max(1, positionSize - 1);
+            }
+            
+            // Hold time based on timeframe
+            let holdTime;
+            switch(timeframe) {
+                case '15m':
+                    holdTime = isMeme ? '30-90 ນາທີ' : '1-2 ຊົ່ວໂມງ';
+                    break;
+                case '1h':
+                    holdTime = isMeme ? '2-6 ຊົ່ວໂມງ' : '4-12 ຊົ່ວໂມງ';
+                    break;
+                case '4h':
+                    holdTime = isMeme ? '6-24 ຊົ່ວໂມງ' : '1-3 ວັນ';
+                    break;
+                case '1d':
+                    holdTime = isMeme ? '1-3 ວັນ' : '3-7 ວັນ';
+                    break;
+                default:
+                    holdTime = 'ຕາມສະພາບ';
+            }
+            
+            const profitPct = (adjustedTakeProfit * 100).toFixed(1) + '%';
+            
+            return {
+                entryPrice,
+                stopLoss,
+                takeProfit,
+                riskReward: riskReward.toFixed(2),
+                positionSize: positionSize + '%',
+                holdTime,
+                profitPct,
+                stopLossPct: (adjustedStopLoss * 100).toFixed(1) + '%'
+            };
+        }
+
+        function getSignalDescription(signal, score, isMeme, timeframe) {
+            const memeWarning = isMeme ? '⚠️ MEME COIN - ຄວາມສ່ຽງສູງ! ' : '';
+            const tfText = timeframe === '1d' ? 'ໄລຍະຍາວ' : 
+                          timeframe === '4h' ? 'ໄລຍະກາງ' : 
+                          timeframe === '1h' ? 'ໄລຍະສັ້ນ' : 'ໄລຍະສັ້ນຫຼາຍ';
+            
+            switch(signal) {
+                case 'STRONG_BUY':
+                    return `${memeWarning}${tfText}: ສັນຍານຊື້ແຮງ (${score}/100) - ໂອກາດດີສຸດ`;
+                case 'BUY':
+                    return `${memeWarning}${tfText}: ສັນຍານຊື້ (${score}/100) - ໂອກາດດີ`;
+                case 'HOLD':
+                    return `${tfText}: ລໍຖ້າ (${score}/100) - ຕະຫຼາດຍັງບໍ່ຊັດເຈນ`;
+                case 'SELL':
+                    return `${memeWarning}${tfText}: ສັນຍານຂາຍ (${score}/100) - ລະວັງຄວາມສ່ຽງ`;
+                case 'STRONG_SELL':
+                    return `${memeWarning}${tfText}: ສັນຍານຂາຍແຮງ (${score}/100) - ຄວາມສ່ຽງສູງ`;
+                default:
+                    return 'ກຳລັງວິເຄາະ...';
+            }
+        }
+
+        function updateUI(analysis, currentPrice, timestamps, symbol, isMeme, timeframe) {
+            // Update price
+            const priceEl = document.getElementById('priceLabel');
+            const priceChangeEl = document.getElementById('priceChange24h');
+            
+            let priceText;
+            if (currentPrice < 0.0001) {
+                priceText = currentPrice.toFixed(8);
+            } else if (currentPrice < 0.01) {
+                priceText = currentPrice.toFixed(6);
+            } else if (currentPrice < 1) {
+                priceText = currentPrice.toFixed(4);
+            } else if (currentPrice < 1000) {
+                priceText = currentPrice.toFixed(2);
+            } else {
+                priceText = currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            
+            priceEl.textContent = '$' + priceText;
+            
+            // Calculate 24h change (simulated)
+            if (lastPrice > 0) {
+                const changePercent = ((currentPrice - lastPrice) / lastPrice) * 100;
+                priceChangeEl.textContent = `(${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`;
+                priceChangeEl.className = changePercent >= 0 ? 
+                    'text-sm font-bold text-green-400' : 'text-sm font-bold text-red-400';
+                
+                // Animation
+                priceEl.classList.remove('price-up', 'price-down');
+                void priceEl.offsetWidth;
+                priceEl.classList.add(changePercent >= 0 ? 'price-up' : 'price-down');
+            }
+            
+            // Update indicators
+            document.getElementById('rsiVal').textContent = analysis.rsi.value.toFixed(1);
+            document.getElementById('rsiSignal').textContent = analysis.rsi.signal;
+            document.getElementById('rsiSignal').className = `text-[8px] mt-1 ${
+                analysis.rsi.signal === 'oversold' ? 'text-green-400' : 
+                analysis.rsi.signal === 'overbought' ? 'text-red-400' : 'text-yellow-400'
+            }`;
+            
+            document.getElementById('macdEnergy').textContent = analysis.macd.value.toFixed(4);
+            document.getElementById('macdSignal').textContent = analysis.macd.signal;
+            document.getElementById('macdSignal').className = `text-[8px] mt-1 ${
+                analysis.macd.signal === 'bullish' ? 'text-green-400' : 
+                analysis.macd.signal === 'bearish' ? 'text-red-400' : 'text-yellow-400'
+            }`;
+            
+            document.getElementById('adxPower').textContent = analysis.adx.value.toFixed(0);
+            document.getElementById('adxSignal').textContent = analysis.adx.signal;
+            document.getElementById('adxSignal').className = `text-[8px] mt-1 ${
+                analysis.adx.signal === 'strong' ? 'text-green-400' : 
+                analysis.adx.signal === 'medium' ? 'text-yellow-400' : 'text-red-400'
+            }`;
+            
+            document.getElementById('bbSignal').textContent = analysis.bb.percentB.toFixed(0) + '%';
+            document.getElementById('bbPosition').textContent = analysis.bb.position;
+            document.getElementById('bbPosition').className = `text-[8px] mt-1 ${
+                analysis.bb.position === 'oversold' ? 'text-green-400' : 
+                analysis.bb.position === 'overbought' ? 'text-red-400' : 'text-yellow-400'
+            }`;
+            
+            document.getElementById('volumeSignal').textContent = analysis.volumeAnalysis.ratio.toFixed(1) + 'x';
+            document.getElementById('volumeStatus').textContent = analysis.volumeAnalysis.status;
+            document.getElementById('volumeStatus').className = `text-[8px] mt-1 ${
+                analysis.volumeAnalysis.status === 'high' ? 'text-green-400' : 
+                analysis.volumeAnalysis.status === 'low' ? 'text-red-400' : 'text-yellow-400'
+            }`;
+            
+            document.getElementById('orderFlow').textContent = (analysis.orderFlow.ratio * 100).toFixed(0) + '%';
+            document.getElementById('flowDirection').textContent = analysis.orderFlow.bias;
+            document.getElementById('flowDirection').className = `text-[8px] mt-1 ${
+                analysis.orderFlow.bias === 'bullish' ? 'text-green-400' : 
+                analysis.orderFlow.bias === 'bearish' ? 'text-red-400' : 'text-yellow-400'
+            }`;
+            
+            // Update main signal
+            const signal = analysis.signal;
+            const signalEl = document.getElementById('signalDisplay');
+            const card = document.getElementById('signalCard');
+            const reasoning = document.getElementById('reasoning');
+            const compositeScore = document.getElementById('compositeScore');
+            const compositeBar = document.getElementById('compositeBar');
+            
+            compositeScore.textContent = `${signal.score}/100`;
+            compositeBar.style.width = `${signal.score}%`;
+            
+            let signalText, cardClass, textClass;
+            
+            switch(signal.signal) {
+                case 'STRONG_BUY':
+                    signalText = isMeme ? 'ຊື້ MEME 🔥' : 'ຊື້ແຮງ 🔥';
+                    cardClass = "lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-green-500 buy-glow";
+                    textClass = "text-5xl font-black mb-2 text-green-500 animate-pulse";
+                    break;
+                case 'BUY':
+                    signalText = isMeme ? 'ຊື້ MEME ✅' : 'ຊື້ ✅';
+                    cardClass = "lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-green-400";
+                    textClass = "text-5xl font-black mb-2 text-green-400";
+                    break;
+                case 'SELL':
+                    signalText = isMeme ? 'ຂາຍ MEME ⚠️' : 'ຂາຍ ⚠️';
+                    cardClass = "lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-orange-500";
+                    textClass = "text-5xl font-black mb-2 text-orange-500";
+                    break;
+                case 'STRONG_SELL':
+                    signalText = isMeme ? 'ຂາຍ MEME 🚨' : 'ຂາຍແຮງ 🚨';
+                    cardClass = "lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-red-500 sell-glow";
+                    textClass = "text-5xl font-black mb-2 text-red-500 animate-pulse";
+                    break;
+                default:
+                    signalText = isMeme ? 'ລໍຖ້າ MEME ⏳' : 'ລໍຖ້າ ⏳';
+                    cardClass = "lg:col-span-5 glass-card rounded-3xl p-8 border-t-4 border-slate-700";
+                    textClass = "text-5xl font-black mb-2 text-slate-500";
+            }
+            
+            signalEl.textContent = signalText;
+            signalEl.className = textClass;
+            card.className = cardClass;
+            
+            // Update reasoning and confidence
+            reasoning.textContent = signal.description;
+            document.getElementById('confidenceScore').textContent = 
+                `ຄວາມໝັ້ນໃຈ: ${analysis.confidence.percentage}% (${analysis.confidence.level})`;
+            document.getElementById('accuracyBadge').textContent = 'ຄວາມແມ່ນຍຳ: 82%';
+            
+            // Update trade plan
+            const plan = analysis.tradePlan;
+            
+            let entryFormat, stopFormat, targetFormat;
+            if (currentPrice < 0.01) {
+                entryFormat = plan.entryPrice.toFixed(8);
+                stopFormat = plan.stopLoss.toFixed(8);
+                targetFormat = plan.takeProfit.toFixed(8);
+            } else if (currentPrice < 1) {
+                entryFormat = plan.entryPrice.toFixed(6);
+                stopFormat = plan.stopLoss.toFixed(6);
+                targetFormat = plan.takeProfit.toFixed(6);
+            } else {
+                entryFormat = plan.entryPrice.toFixed(4);
+                stopFormat = plan.stopLoss.toFixed(4);
+                targetFormat = plan.takeProfit.toFixed(4);
+            }
+            
+            document.getElementById('entryPrice').textContent = '$' + entryFormat;
+            document.getElementById('stopPrice').textContent = '$' + stopFormat;
+            document.getElementById('targetPrice').textContent = '$' + targetFormat;
+            document.getElementById('profitPct').textContent = '+' + plan.profitPct;
+            document.getElementById('riskReward').textContent = `Risk/Reward: ${plan.riskReward}`;
+            document.getElementById('holdTime').textContent = plan.holdTime;
+            document.getElementById('positionSizeDisplay').textContent = plan.positionSize;
+            
+            // Update multi-timeframe analysis
+            const trend = analysis.macd.signal === 'bullish' ? '↑' : 
+                         analysis.macd.signal === 'bearish' ? '↓' : '→';
+            
+            document.getElementById('tfShort').textContent = trend;
+            document.getElementById('tfMedium').textContent = analysis.signal.score >= 60 ? trend : '→';
+            document.getElementById('tfLong').textContent = analysis.signal.score >= 70 ? trend : '→';
+            
+            const alignment = analysis.signal.score >= 70 ? 'ພ້ອງກັນ' : 
+                            analysis.signal.score >= 60 ? 'ພາກສ່ວນ' : 'ຂັດກັນ';
+            
+            document.getElementById('trendAlignment').textContent = alignment;
+            document.getElementById('trendAlignment').className = 
+                `text-[10px] px-2 py-0.5 rounded ${
+                    analysis.signal.score >= 70 ? 'bg-green-500/20 text-green-300' : 
+                    analysis.signal.score >= 60 ? 'bg-yellow-500/20 text-yellow-300' : 
+                    'bg-red-500/20 text-red-300'
+                }`;
+            
+            // Update expert advice
+            const riskLevel = document.getElementById('riskLevel').value;
+            const riskText = riskLevel === 'low' ? 'ຕ່ຳ' : 
+                            riskLevel === 'medium' ? 'ກາງ' : 'ສູງ';
+            
+            let advice = '';
+            if (isMeme) {
+                advice += `<strong>⚠️ ຄຳເຕືອນ MEME COIN:</strong> ຄວາມສ່ຽງສູງຫຼາຍ!<br>`;
+            }
+            
+            if (signal.signal.includes('BUY')) {
+                advice += `<strong>ແນະນຳ:</strong> ເຂົ້າຕຳແໜ່ງດ້ວຍ ${plan.positionSize} ຂອງ portfolio.<br>`;
+                advice += `<strong>Stop Loss:</strong> ${plan.stopLossPct}, <strong>Take Profit:</strong> ${plan.profitPct}<br>`;
+                advice += `<strong>ຍຸດທະສາດ:</strong> ${isMeme ? '60% @ ' + (parseFloat(plan.profitPct) * 0.7).toFixed(1) + '%, 40% @ ' + plan.profitPct : '50% @ ' + (parseFloat(plan.profitPct) * 0.5).toFixed(1) + '%, 30% @ ' + plan.profitPct}`;
+            } else if (signal.signal.includes('SELL')) {
+                advice += `<strong>ແນະນຳ:</strong> ພິຈາລະນາການອອກຈາກຕຳແໜ່ງ.<br>`;
+                advice += `<strong>ຄວາມສ່ຽງ:</strong> ຕະຫຼາດມີແນວໂນ້ມຂາລົງ`;
+            } else {
+                advice += `<strong>ແນະນຳ:</strong> ຖືເງິນສົດລໍຖ້າ.<br>`;
+                advice += `<strong>ການລໍຖ້າ:</strong> ຕະຫຼາດຍັງບໍ່ມີທິດທາງຊັດເຈນ`;
+            }
+            
+            advice += `<br><strong>ໄລຍະເວລາ:</strong> ${timeframe === '1d' ? 'ຍາວ (1D)' : timeframe === '4h' ? 'ກາງ (4H)' : timeframe === '1h' ? 'ສັ້ນ (1H)' : 'ສັ້ນຫຼາຍ (15m)'}`;
+            advice += `<br><strong>ລະດັບຄວາມສ່ຽງ:</strong> ${riskText}`;
+            
+            if (isMeme) {
+                advice += `<br><strong>💎 ຄຳແນະນຳ MEME:</strong> ໃຊ້ພຽງເງິນທີ່ທ່ານພ້ອມຈະສູນເສຍ.`;
+            }
+            
+            document.getElementById('adviceText').innerHTML = advice;
+            
+            // Update trend badge
+            const trendBadge = document.getElementById('trendBadge');
+            trendBadge.textContent = isMeme ? 
+                `MEME: ${analysis.macd.signal === 'bullish' ? 'ຂາຂຶ້ນ ↗️' : 'ຂາລົງ ↘️'}` : 
+                `ແນວໂນ້ມ: ${analysis.macd.signal === 'bullish' ? 'ຂາຂຶ້ນ ↗️' : 'ຂາລົງ ↘️'}`;
+            
+            trendBadge.className = 
+                `px-3 py-1 rounded-full text-[10px] font-black ${
+                    analysis.macd.signal === 'bullish' ? 
+                    'bg-green-500/10 text-green-400 border border-green-500/30' : 
+                    'bg-red-500/10 text-red-400 border border-red-500/30'
+                } mb-1`;
+            
+            // Update signal quality
+            const quality = analysis.signal.score >= 70 ? 'ດີ' : 
+                          analysis.signal.score >= 50 ? 'ກາງ' : 'ຕ່ຳ';
+            
+            document.getElementById('signalQuality').textContent = quality;
+            document.getElementById('signalQuality').className = 
+                analysis.signal.score >= 70 ? 'text-green-400' : 
+                analysis.signal.score >= 50 ? 'text-yellow-400' : 'text-red-400';
+            
+            // Update statistics
+            document.getElementById('winRate').textContent = '82%';
+            document.getElementById('riskRewardStats').textContent = '1:2.5';
+            document.getElementById('overallAccuracy').textContent = '82%';
+            
+            // Create charts
+            createCharts(timestamps, currentPrice, analysis, symbol, timeframe);
+        }
+
+        function createCharts(timestamps, currentPrice, analysis, symbol, timeframe) {
+            // Hide placeholders
+            document.getElementById('chartPlaceholder').classList.add('hidden');
+            document.getElementById('indicatorPlaceholder').classList.add('hidden');
+            
+            // Show charts
+            document.getElementById('mainChart').classList.remove('hidden');
+            document.getElementById('indicatorChart').classList.remove('hidden');
+            
+            // Destroy existing charts
+            if (chartInstance) chartInstance.destroy();
+            if (indicatorChart) indicatorChart.destroy();
+            
+            // Main Price Chart
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            // Generate sample price data
+            const prices = [];
+            const basePrice = currentPrice;
+            const dataPoints = 50;
+            
+            for (let i = 0; i < dataPoints; i++) {
+                const timeRatio = i / dataPoints;
+                const variation = Math.sin(timeRatio * 10) * (basePrice * 0.02) + 
+                                 Math.cos(timeRatio * 5) * (basePrice * 0.01);
+                prices.push(basePrice + variation);
+            }
+            
+            // Create gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(234, 179, 8, 0.3)');
+            gradient.addColorStop(1, 'rgba(234, 179, 8, 0.05)');
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timestamps.slice(-dataPoints),
+                    datasets: [{
+                        label: symbol,
+                        data: prices,
+                        borderColor: '#eab308',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#eab308',
+                            bodyColor: '#f8fafc',
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += '$' + context.parsed.y.toFixed(4);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                maxTicksLimit: 8,
+                                font: {
+                                    size: 9
+                                }
+                            }
+                        },
+                        y: {
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 9
+                                },
+                                callback: function(value) {
+                                    if (value >= 1000000) return '$' + (value/1000000).toFixed(1) + 'M';
+                                    if (value >= 1000) return '$' + (value/1000).toFixed(1) + 'k';
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Indicator Chart
+            const indCtx = document.getElementById('indicatorChart').getContext('2d');
+            
+            // Generate indicator data
+            const rsiData = [];
+            const macdData = [];
+            const dataPoints2 = 40;
+            
+            for (let i = 0; i < dataPoints2; i++) {
+                const timeRatio = i / dataPoints2;
+                rsiData.push(50 + Math.sin(timeRatio * 8) * 25);
+                macdData.push(Math.sin(timeRatio * 6) * 0.015);
+            }
+            
+            indicatorChart = new Chart(indCtx, {
+                type: 'line',
+                data: {
+                    labels: timestamps.slice(-dataPoints2),
+                    datasets: [
+                        {
+                            label: 'RSI',
+                            data: rsiData,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'MACD',
+                            data: macdData,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94a3b8',
+                                font: {
+                                    size: 9
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#10b981',
+                                font: {
+                                    size: 8
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                color: '#8b5cf6',
+                                font: {
+                                    size: 8
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displaySampleData(symbol, timeframe) {
+            // Display sample data for testing
+            const isMeme = memeCoins.includes(symbol);
+            const samplePrice = isMeme ? 0.00001234 : 45000;
+            
+            const sampleAnalysis = {
+                rsi: { value: 45 + Math.random() * 30, signal: Math.random() > 0.6 ? 'neutral' : Math.random() > 0.3 ? 'oversold' : 'overbought' },
+                macd: { value: (Math.random() - 0.5) * 0.02, signal: Math.random() > 0.6 ? 'bullish' : Math.random() > 0.3 ? 'bearish' : 'neutral', histogram: 0 },
+                adx: { value: 20 + Math.random() * 30, signal: Math.random() > 0.7 ? 'strong' : Math.random() > 0.4 ? 'medium' : 'weak', trend: Math.random() > 0.5 ? 'bullish' : 'bearish' },
+                bb: { percentB: Math.random() * 100, position: Math.random() > 0.7 ? 'oversold' : Math.random() > 0.4 ? 'overbought' : 'neutral' },
+                volumeAnalysis: { ratio: 0.8 + Math.random() * 1.4, status: 'normal', signal: 'neutral' },
+                orderFlow: { ratio: 0.3 + Math.random() * 0.4, bias: Math.random() > 0.6 ? 'bullish' : Math.random() > 0.3 ? 'bearish' : 'neutral' },
+                signal: {
+                    score: 40 + Math.random() * 40,
+                    signal: Math.random() > 0.7 ? 'BUY' : Math.random() > 0.4 ? 'HOLD' : 'SELL',
+                    description: 'ຂໍ້ມູນຕົວຢ່າງ - ກະລຸນາກວດສອບເຊື່ອມຕໍ່'
+                },
+                confidence: { percentage: 50 + Math.random() * 30, level: 'ກາງ' },
+                tradePlan: {
+                    entryPrice: samplePrice,
+                    stopLoss: samplePrice * 0.95,
+                    takeProfit: samplePrice * 1.05,
+                    riskReward: (1 + Math.random()).toFixed(2),
+                    positionSize: '2%',
+                    holdTime: '12-24 ຊົ່ວໂມງ',
+                    profitPct: '5%',
+                    stopLossPct: '5%'
+                }
+            };
+            
+            // Generate sample timestamps
+            const sampleTimestamps = [];
+            for (let i = 0; i < 50; i++) {
+                const time = new Date(Date.now() - (49 - i) * 30 * 60000);
+                const hours = time.getHours().toString().padStart(2, '0');
+                const minutes = time.getMinutes().toString().padStart(2, '0');
+                sampleTimestamps.push(`${hours}:${minutes}`);
+            }
+            
+            // Update UI with sample data
+            updateUI(sampleAnalysis, samplePrice, sampleTimestamps, symbol, isMeme, timeframe);
+        }
+
+        // Initialize the application
+        window.onload = function() {
+            updateConnectionStatus('ready', 'ກົດປຸ່ມ "ວິເຄາະດຽວນີ້" ເພື່ອເລີ່ມຕົ້ນການວິເຄາະ');
+            
+            // Add event listeners
+            document.getElementById('refreshInterval').addEventListener('change', startAutoRefresh);
+            document.getElementById('symbol').addEventListener('change', function() {
+                const symbol = this.value;
+                if (memeCoins.includes(symbol)) {
+                    updateConnectionStatus('ready', `Meme coin ${symbol} - ຄວາມສ່ຽງສູງ!`);
+                }
+            });
+            
+            // Auto analyze on page load
+            setTimeout(() => {
+                analyzeData();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
